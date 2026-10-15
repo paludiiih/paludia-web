@@ -6,14 +6,15 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const sql = readFileSync(path.join(here, "../supabase/migrations/0001_cuentas.sql"), "utf8");
+const dir = path.join(here, "../supabase/migrations");
+const sql = ["0001_cuentas.sql", "0002_limites.sql"].map((f) => readFileSync(path.join(dir, f), "utf8")).join("\n");
 const db = new PGlite();
 let failures = 0;
 const ok = (cond, msg) => { console.log((cond ? "OK   " : "FALLA") + "  " + msg); if (!cond) failures++; };
 async function expectError(fn, msg) { try { await fn(); ok(false, msg + " (no dio error)"); } catch { ok(true, msg); } }
 
 await db.exec(`
-  create role anon nologin; create role authenticated nologin;
+  create role anon nologin; create role authenticated nologin; create role service_role nologin bypassrls;
   create schema auth;
   create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}'::jsonb);
   create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
@@ -72,6 +73,37 @@ await as(A, async () => {
 await db.exec(`set role anon; select set_config('request.jwt.claim.sub', '', false);`);
 await expectError(() => db.query(`select * from public.conversations`), "un visitante sin sesión no puede leer nada");
 await db.exec(`reset role;`);
+
+// ---------- Límites de uso ----------
+await db.exec(`set role service_role;`);
+const consume = async (uid, kind, limit) => (await db.query(`select * from public.consume_quota('${uid}', '${kind}', ${limit})`)).rows[0];
+let last;
+for (let i = 0; i < 35; i++) last = await consume(A, "mensaje", 35);
+ok(last.allowed === true && last.used === 35, "el plan Gratis permite exactamente 35 mensajes");
+const blocked = await consume(A, "mensaje", 35);
+ok(blocked.allowed === false && blocked.used === 35, "el mensaje 36 se bloquea");
+const hours = (new Date(blocked.resets_at) - Date.now()) / 36e5;
+ok(hours > 23.9 && hours <= 24, "avisa que se renueva en 24 horas");
+for (let i = 0; i < 5; i++) await consume(A, "imagen", 5);
+ok((await consume(A, "imagen", 5)).allowed === false, "las imágenes tienen su propio límite (5)");
+await db.query(`select public.refund_quota('${A}', 'imagen')`);
+ok((await consume(A, "imagen", 5)).allowed === true, "si la IA falla, se devuelve el uso");
+ok((await consume(B, "mensaje", 35)).used === 1, "cada usuario tiene su propio contador");
+await db.exec(`reset role; update public.usage_windows set window_start = now() - interval '25 hours' where user_id = '${A}'; set role service_role;`);
+const fresh = await consume(A, "mensaje", 35);
+ok(fresh.allowed === true && fresh.used === 1, "pasadas 24 horas el contador vuelve a cero");
+ok((await consume(A, "mensaje", 500)).allowed === true, "un plan con 500 usa el mismo contador con más cupo");
+const total = await db.query(`select public.add_spend(0.25) a`); await db.query(`select public.add_spend(0.5)`);
+ok(Number((await db.query(`select usd from public.app_spend`)).rows[0].usd) === 0.75, "el gasto del día se suma");
+await db.exec(`reset role;`);
+await as(A, async () => {
+  await expectError(() => db.query(`select * from public.consume_quota('${A}', 'mensaje', 999999)`), "un usuario no puede consumir ni inventarse cupo");
+  await expectError(() => db.query(`select public.refund_quota('${A}', 'mensaje')`), "un usuario no puede devolverse usos");
+  await expectError(() => db.exec(`update public.usage_windows set used = 0 where user_id = '${A}'`), "un usuario no puede reiniciar su contador");
+  const mine = await db.query(`select kind from public.usage_windows`);
+  ok(mine.rows.length === 2, "un usuario solo ve sus propios contadores");
+  await expectError(() => db.query(`select * from public.app_spend`), "un usuario no ve el gasto de la app");
+});
 
 await db.exec(`delete from auth.users where id = '${B}'`);
 const left = await db.query(`select count(*)::int n from public.messages where user_id = '${B}'`);

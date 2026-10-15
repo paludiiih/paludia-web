@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "./lib/supabase/env";
 
 // Páginas que exigen haber iniciado sesión
-const PRIVATE = ["/perfil", "/configuracion"];
+const PRIVATE = ["/perfil", "/configuracion", "/chat"];
 // Páginas que no tienen sentido con la sesión iniciada
 const GUEST_ONLY = ["/ingresar", "/registro"];
 
@@ -35,7 +35,7 @@ export async function proxy(request: NextRequest) {
   }
   if (data.user && GUEST_ONLY.some((p) => path.startsWith(p))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    url.pathname = "/chat";
     url.search = "";
     return NextResponse.redirect(url);
   }

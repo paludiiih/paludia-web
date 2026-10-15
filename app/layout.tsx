@@ -31,12 +31,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <nav aria-label="Principal">
             {signedIn ? (
               <>
+                <Link href="/chat">Chat</Link>
+                <Link href="/planes">Planes</Link>
                 <Link href="/perfil">Perfil</Link>
                 <Link href="/configuracion">Configuración</Link>
                 <form action="/salir" method="post"><button className="linkbtn" type="submit">Cerrar sesión</button></form>
               </>
             ) : (
               <>
+                <Link href="/planes">Planes</Link>
                 <Link href="/ingresar">Ingresar</Link>
                 <Link href="/registro">Crear cuenta</Link>
               </>

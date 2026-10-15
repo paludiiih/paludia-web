@@ -6,7 +6,7 @@ import { safeNext } from "@/lib/auth";
 // Punto de regreso de Google y de los enlaces por correo (confirmación y recuperación).
 export async function GET(request: NextRequest) {
   const url = request.nextUrl;
-  const next = safeNext(url.searchParams.get("next"));
+  const next = safeNext(url.searchParams.get("next"), "/chat");
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
   const type = url.searchParams.get("type") as EmailOtpType | null;
