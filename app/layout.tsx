@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { supabaseConfigured } from "@/lib/supabase/env";
 import { createClient } from "@/lib/supabase/server";
+import { BrandMark } from "@/components/BrandMark";
 
 export const metadata: Metadata = {
   title: { default: "PaludIA", template: "%s · PaludIA" },
@@ -27,7 +28,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         <header className="topbar">
-          <Link href="/" className="brand"><span className="sun" /><span className="logo">Palud<b>IA</b></span></Link>
+          <Link href="/" className="brand">
+            <BrandMark size={34} idSuffix="hdr" />
+            <span className="brand-text"><span className="logo">Palud<b>IA</b></span><span className="brand-tag">Tu IA, siempre contigo</span></span>
+          </Link>
           <nav aria-label="Principal">
             {signedIn ? (
               <>

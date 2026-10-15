@@ -12,14 +12,15 @@ export default async function Home() {
   }
   const g = PLANES.gratis;
   return (
-    <main className="page stack">
-      <h1>Tu socio de <span style={{ color: "var(--accent)" }}>ecommerce</span>, con IA</h1>
-      <p className="lead">PaludIA te ayuda a encontrar productos ganadores, armar tu tienda y escribir anuncios. Subí la foto de un producto o un anuncio y la lee para ayudarte. Tu historial queda guardado en tu cuenta.</p>
-      <p className="lead">Gratis: {g.mensajesPorDia} mensajes cada 24 horas, con lectura de fotos.</p>
+    <main className="page stack" style={{ paddingTop: 56 }}>
+      <span className="hero-eyebrow">Tu socia de ecommerce, con IA</span>
+      <h1>Convertí cualquier producto en una <span className="accent-word">venta</span></h1>
+      <p className="lead">PaludIA te ayuda a encontrar productos ganadores, armar tu tienda y escribir anuncios para Meta. Subí la foto de un producto o un anuncio y la lee para ayudarte, con tu historial siempre guardado.</p>
       <div className="row">
         <Link className="btn primary auto" href="/registro">Crear cuenta gratis</Link>
         <Link className="btn auto" href="/ingresar">Ya tengo cuenta</Link>
       </div>
+      <p className="small">Gratis: {g.mensajesPorDia} mensajes cada 24 horas, con lectura de fotos. Sin tarjeta.</p>
     </main>
   );
 }

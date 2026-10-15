@@ -11,5 +11,7 @@ export default async function Page() {
   const supabase = await createClient();
   const { data } = await supabase.auth.getUser();
   if (!data.user) redirect("/ingresar?volver=/chat");
-  return <ChatApp userId={data.user.id} />;
+  const u = data.user;
+  const nombre = ((u.user_metadata?.full_name as string) || u.email?.split("@")[0] || "Vos").trim();
+  return <ChatApp userId={u.id} userName={nombre} />;
 }
