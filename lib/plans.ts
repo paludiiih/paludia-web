@@ -9,6 +9,7 @@ export type Plan = {
   precio: string; // texto que se muestra en la página de planes
   mensajesPorDia: number; // se renuevan 24 h después del primer mensaje
   imagenesPorDia: number;
+  cvPorMes: number; // CV optimizados para ATS por mes (se renueva 30 días después del primero)
   modeloChat: string; // modelo de Claude
   maxRespuesta: number; // largo máximo de cada respuesta (tokens)
   busquedaWeb: boolean;
@@ -24,6 +25,7 @@ export const PLANES: Record<PlanId, Plan> = {
     precio: "US$0",
     mensajesPorDia: 30,
     imagenesPorDia: 4,
+    cvPorMes: 1,
     modeloChat: "claude-haiku-5-5",
     maxRespuesta: 2048,
     busquedaWeb: false,
@@ -37,6 +39,7 @@ export const PLANES: Record<PlanId, Plan> = {
     precio: "US$15",
     mensajesPorDia: 50,
     imagenesPorDia: 12,
+    cvPorMes: 10,
     modeloChat: "claude-sonnet-5-5",
     maxRespuesta: 8192,
     busquedaWeb: true,
@@ -50,6 +53,7 @@ export const PLANES: Record<PlanId, Plan> = {
     precio: "US$39",
     mensajesPorDia: 120,
     imagenesPorDia: 25,
+    cvPorMes: 30,
     modeloChat: "claude-opus-5-5",
     maxRespuesta: 16384,
     busquedaWeb: true,

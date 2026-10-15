@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SUPABASE_ANON_KEY, SUPABASE_URL, supabaseConfigured } from "./lib/supabase/env";
 
 // Páginas que exigen haber iniciado sesión
-const PRIVATE = ["/perfil", "/configuracion", "/chat"];
+const PRIVATE = ["/perfil", "/configuracion", "/chat", "/herramientas/cv"];
 // Páginas que no tienen sentido con la sesión iniciada
 const GUEST_ONLY = ["/ingresar", "/registro"];
 

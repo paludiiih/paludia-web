@@ -421,8 +421,12 @@ export function ChatApp({ userId, userName }: { userId: string; userName: string
         </div>
 
         <div className="panel-label">Herramientas</div>
+        <Link className="tool-row" href="/herramientas/cv">
+          <span className="tool-ico b1">{I.doc}</span>
+          <span className="tool-tx"><b>Crear CV (ATS)</b><span>Tu CV adaptado, en PDF y Word</span></span>
+        </Link>
         <button className="tool-row" type="button" onClick={abrirFoto}>
-          <span className="tool-ico b1">{I.photo}</span>
+          <span className="tool-ico b3">{I.photo}</span>
           <span className="tool-tx"><b>Analizar una foto</b><span>Subí un producto, anuncio o etiqueta</span></span>
         </button>
         <div className="tool-row" aria-disabled={!web}>
@@ -451,8 +455,8 @@ export function ChatApp({ userId, userName }: { userId: string; userName: string
           <span className="soon-chip">Pronto</span>
         </div>
         <div className="tool-row soon">
-          <span className="tool-ico b1">{I.doc}</span>
-          <span className="tool-tx"><b>CV optimizado (ATS)</b><span>Tu CV adaptado a cada búsqueda</span></span>
+          <span className="tool-ico b3">{I.doc}</span>
+          <span className="tool-tx"><b>Resumidor de documentos</b><span>PDF y Word, con repaso</span></span>
           <span className="soon-chip">Pronto</span>
         </div>
       </aside>

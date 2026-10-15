@@ -337,6 +337,16 @@ body:has(.chat-shell) .topbar, body:has(.chat-shell) footer.foot { display: none
 .calc-out.big .calc-out-val { font-size: clamp(26px, 6vw, 32px); background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .calc-note { margin-top: 2px; }
 
+/* ---------- Vista previa del CV ---------- */
+.cv-preview { background: var(--sunken); border: 1px solid var(--line); border-radius: 14px; padding: 22px; }
+.cv-preview h3 { font: 800 22px/1.1 var(--f-display); margin: 0; }
+.cv-preview .cv-titular { color: var(--muted); margin: 3px 0 2px; }
+.cv-preview h4 { font: 800 12px/1 var(--f-body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin: 18px 0 6px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+.cv-preview p { margin: 0 0 6px; }
+.cv-preview .cv-item { margin-bottom: 10px; }
+.cv-preview ul { margin: 4px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.cv-preview li { padding-left: 2px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
 }

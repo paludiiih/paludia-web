@@ -2,7 +2,10 @@ import "server-only";
 import { createClient, createServiceClient } from "@/lib/supabase/server";
 import { planDe, TOPE_DIARIO_USD, type Plan } from "@/lib/plans";
 
-export type Kind = "mensaje" | "imagen";
+export type Kind = "mensaje" | "imagen" | "cv";
+
+// Cada cupo tiene su propia ventana. Chat/imágenes se renuevan cada 24 h; el CV, cada 30 días.
+export const VENTANA_HORAS: Record<Kind, number> = { mensaje: 24, imagen: 24, cv: 720 };
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public extra: Record<string, unknown> = {}) {
@@ -26,7 +29,9 @@ export async function getContext() {
 type Admin = NonNullable<ReturnType<typeof createServiceClient>>;
 
 export function limiteDe(plan: Plan, kind: Kind) {
-  return kind === "mensaje" ? plan.mensajesPorDia : plan.imagenesPorDia;
+  if (kind === "mensaje") return plan.mensajesPorDia;
+  if (kind === "cv") return plan.cvPorMes;
+  return plan.imagenesPorDia;
 }
 
 // Reserva un uso. Si no queda cupo, corta con un error que dice cuándo se renueva.
@@ -36,12 +41,13 @@ export async function consumir(admin: Admin, userId: string, plan: Plan, kind: K
     throw new ApiError(503, "PaludIA alcanzó su límite de uso de hoy. Volvé a intentar mañana.");
   }
   const limit = limiteDe(plan, kind);
-  const { data, error } = await admin.rpc("consume_quota", { p_user: userId, p_kind: kind, p_limit: limit });
+  const { data, error } = await admin.rpc("consume_quota", { p_user: userId, p_kind: kind, p_limit: limit, p_hours: VENTANA_HORAS[kind] });
   if (error) throw new ApiError(500, "No se pudo verificar tu límite de uso. Volvé a intentar.");
   const row = Array.isArray(data) ? data[0] : data;
   if (!row?.allowed) {
-    const cosa = kind === "mensaje" ? `tus ${limit} mensajes` : `tus ${limit} imágenes`;
-    throw new ApiError(429, `Usaste ${cosa} de las últimas 24 horas.`, { resetsAt: row?.resets_at, limit, kind, plan: plan.id });
+    const cosa = kind === "mensaje" ? `tus ${limit} mensajes` : kind === "cv" ? `tus ${limit} CV` : `tus ${limit} imágenes`;
+    const periodo = kind === "cv" ? "de este mes" : "de las últimas 24 horas";
+    throw new ApiError(429, `Usaste ${cosa} ${periodo}.`, { resetsAt: row?.resets_at, limit, kind, plan: plan.id });
   }
   return { used: row.used as number, limit, resetsAt: row.resets_at as string };
 }
@@ -60,11 +66,13 @@ export async function estadoDeUso(admin: Admin, userId: string, plan: Plan) {
   const now = Date.now();
   const out: Record<Kind, { used: number; limit: number; resetsAt: string | null }> = {
     mensaje: { used: 0, limit: plan.mensajesPorDia, resetsAt: null },
-    imagen: { used: 0, limit: plan.imagenesPorDia, resetsAt: null }
+    imagen: { used: 0, limit: plan.imagenesPorDia, resetsAt: null },
+    cv: { used: 0, limit: plan.cvPorMes, resetsAt: null }
   };
   for (const r of data ?? []) {
     const k = r.kind as Kind;
-    const reset = new Date(r.window_start).getTime() + 24 * 3600e3;
+    if (!(k in out)) continue;
+    const reset = new Date(r.window_start).getTime() + (VENTANA_HORAS[k] ?? 24) * 3600e3;
     if (now < reset) out[k] = { used: r.used, limit: out[k].limit, resetsAt: new Date(reset).toISOString() };
   }
   return out;

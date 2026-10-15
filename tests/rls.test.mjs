@@ -7,7 +7,7 @@ import path from "node:path";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dir = path.join(here, "../supabase/migrations");
-const sql = ["0001_cuentas.sql", "0002_limites.sql"].map((f) => readFileSync(path.join(dir, f), "utf8")).join("\n");
+const sql = ["0001_cuentas.sql", "0002_limites.sql", "0003_cv.sql"].map((f) => readFileSync(path.join(dir, f), "utf8")).join("\n");
 const db = new PGlite();
 let failures = 0;
 const ok = (cond, msg) => { console.log((cond ? "OK   " : "FALLA") + "  " + msg); if (!cond) failures++; };
@@ -93,6 +93,14 @@ await db.exec(`reset role; update public.usage_windows set window_start = now() 
 const fresh = await consume(A, "mensaje", 30);
 ok(fresh.allowed === true && fresh.used === 1, "pasadas 24 horas el contador vuelve a cero");
 ok((await consume(A, "mensaje", 500)).allowed === true, "un plan con 500 usa el mismo contador con más cupo");
+// Cupo del CV: ventana mensual (720 h) y tipo de cupo nuevo
+const consume4 = async (uid, kind, limit, hours) => (await db.query(`select * from public.consume_quota('${uid}', '${kind}', ${limit}, ${hours})`)).rows[0];
+const cv1 = await consume4(A, "cv", 1, 720);
+ok(cv1.allowed === true && cv1.used === 1, "el plan Gratis permite 1 CV");
+const cv2 = await consume4(A, "cv", 1, 720);
+ok(cv2.allowed === false, "el segundo CV del mes se bloquea en Gratis");
+const diasCV = (new Date(cv2.resets_at) - Date.now()) / 36e5 / 24;
+ok(diasCV > 29.9 && diasCV <= 30, "el cupo de CV se renueva en 30 días");
 const total = await db.query(`select public.add_spend(0.25) a`); await db.query(`select public.add_spend(0.5)`);
 ok(Number((await db.query(`select usd from public.app_spend`)).rows[0].usd) === 0.75, "el gasto del día se suma");
 await db.exec(`reset role;`);
@@ -101,7 +109,7 @@ await as(A, async () => {
   await expectError(() => db.query(`select public.refund_quota('${A}', 'mensaje')`), "un usuario no puede devolverse usos");
   await expectError(() => db.exec(`update public.usage_windows set used = 0 where user_id = '${A}'`), "un usuario no puede reiniciar su contador");
   const mine = await db.query(`select kind from public.usage_windows`);
-  ok(mine.rows.length === 2, "un usuario solo ve sus propios contadores");
+  ok(mine.rows.length === 3, "un usuario solo ve sus propios contadores (mensaje, imagen y CV)");
   await expectError(() => db.query(`select * from public.app_spend`), "un usuario no ve el gasto de la app");
 });
 
