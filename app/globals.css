@@ -72,7 +72,7 @@ button, input, textarea, select { font: inherit; color: inherit; }
 .topbar nav a, .linkbtn { text-decoration: none; color: var(--muted); padding: 8px 12px; border-radius: 10px; font-size: 15px; font-weight: 600; background: none; border: 0; cursor: pointer; transition: color 0.15s, background 0.15s; white-space: nowrap; }
 .topbar nav a:hover, .linkbtn:hover { background: rgba(255, 255, 255, 0.05); color: var(--ink); }
 .brand { display: flex; align-items: center; gap: 11px; text-decoration: none; color: var(--ink); }
-.brand .brand-text { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
+.brand-text { display: flex; flex-direction: column; line-height: 1; gap: 3px; }
 .logo { font: 800 23px/1 var(--f-display); letter-spacing: -0.02em; }
 .logo b { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .brand-tag { font-size: 11px; color: var(--muted); letter-spacing: 0.01em; }
