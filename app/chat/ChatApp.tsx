@@ -10,15 +10,15 @@ type Msg = {
   id: string;
   role: "user" | "assistant";
   content: string;
-  meta?: { kind?: string; url?: string; sources?: Fuente[]; error?: boolean; truncated?: boolean; interrupted?: boolean };
+  meta?: { kind?: string; fotoUrl?: string; sources?: Fuente[]; error?: boolean; truncated?: boolean; interrupted?: boolean };
   pending?: boolean;
   searching?: boolean;
   error?: string;
 };
 type Conv = { id: string; title: string; updated_at: string };
 type Contador = { used: number; limit: number; resetsAt: string | null };
-type Uso = { plan: { id: string; nombre: string; busquedaWeb: boolean }; uso: { mensaje: Contador; imagen: Contador }; chatActivo: boolean; imagenesActivas: boolean };
-type Limite = { kind: "mensaje" | "imagen"; resetsAt: string; message: string } | null;
+type Uso = { plan: { id: string; nombre: string; busquedaWeb: boolean }; uso: { mensaje: Contador }; chatActivo: boolean };
+type Limite = { resetsAt: string; message: string } | null;
 
 function md(text: string) {
   const html = DOMPurify.sanitize(marked.parse(text, { breaks: true, gfm: true, async: false }) as string);
@@ -33,14 +33,43 @@ function faltan(iso: string | null) {
 }
 const uid = () => Math.random().toString(36).slice(2);
 
+// Achica la foto en el navegador antes de enviarla (máx 1024 px, JPEG liviano).
+async function prepararFoto(file: File): Promise<string> {
+  const dataUrl = await new Promise<string>((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => res(fr.result as string);
+    fr.onerror = () => rej(new Error("read"));
+    fr.readAsDataURL(file);
+  });
+  try {
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error("img"));
+      i.src = dataUrl;
+    });
+    const max = 1024;
+    let w = img.width, h = img.height;
+    if (w > max || h > max) { const r = Math.min(max / w, max / h); w = Math.round(w * r); h = Math.round(h * r); }
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const cx = canvas.getContext("2d");
+    if (!cx) return dataUrl;
+    cx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL("image/jpeg", 0.82);
+  } catch {
+    return dataUrl;
+  }
+}
+
 export function ChatApp({ userId }: { userId: string }) {
   const supabase = useRef(createClient()).current;
   const [convs, setConvs] = useState<Conv[]>([]);
   const [convId, setConvId] = useState<string | null>(null);
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [uso, setUso] = useState<Uso | null>(null);
-  const [modo, setModo] = useState<"mensaje" | "imagen">("mensaje");
   const [texto, setTexto] = useState("");
+  const [foto, setFoto] = useState<{ dataUrl: string; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [limite, setLimite] = useState<Limite>(null);
   const [aviso, setAviso] = useState("");
@@ -50,6 +79,7 @@ export function ChatApp({ userId }: { userId: string }) {
   const scroller = useRef<HTMLDivElement>(null);
   const ctl = useRef<AbortController | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const cargarUso = useCallback(async () => {
     const r = await fetch("/api/uso", { cache: "no-store" }).catch(() => null);
@@ -72,7 +102,7 @@ export function ChatApp({ userId }: { userId: string }) {
   }
   function nueva() {
     if (busy) ctl.current?.abort();
-    setConvId(null); setMsgs([]); setLimite(null); setAviso(""); setDrawer(false);
+    setConvId(null); setMsgs([]); setLimite(null); setAviso(""); setFoto(null); setDrawer(false);
     input.current?.focus();
   }
   async function borrar(id: string) {
@@ -84,43 +114,58 @@ export function ChatApp({ userId }: { userId: string }) {
 
   function patch(id: string, f: (m: Msg) => Msg) { setMsgs((list) => list.map((m) => (m.id === id ? f(m) : m))); }
 
+  async function elegirFoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setAviso("Solo se pueden subir imágenes (JPG, PNG o WebP)."); return; }
+    if (file.size > 20 * 1024 * 1024) { setAviso("La foto es muy pesada. El máximo es 20 MB."); return; }
+    try {
+      setAviso("");
+      const dataUrl = await prepararFoto(file);
+      setFoto({ dataUrl, name: file.name });
+    } catch {
+      setAviso("No se pudo leer la foto. Probá con otra.");
+    }
+  }
+
   async function enviar(e?: React.FormEvent) {
     e?.preventDefault();
     if (busy) { ctl.current?.abort(); return; }
     const t = texto.trim();
-    if (!t) return;
-    setAviso(""); setLimite(null); setTexto(""); setBusy(true);
-    const userMsg: Msg = { id: uid(), role: "user", content: t, meta: modo === "imagen" ? { kind: "imagen" } : undefined };
-    const resp: Msg = { id: uid(), role: "assistant", content: "", pending: true, meta: modo === "imagen" ? { kind: "imagen" } : undefined };
+    if (!t && !foto) return;
+    const fotoActual = foto;
+    setAviso(""); setLimite(null); setTexto(""); setFoto(null); setBusy(true);
+    const userMsg: Msg = { id: uid(), role: "user", content: t || "📷 Foto", meta: fotoActual ? { fotoUrl: fotoActual.dataUrl } : undefined };
+    const resp: Msg = { id: uid(), role: "assistant", content: "", pending: true };
     setMsgs((l) => [...l, userMsg, resp]);
     ctl.current = new AbortController();
     try {
-      if (modo === "imagen") await pedirImagen(t, resp.id, userMsg.id);
-      else await pedirChat(t, resp.id, userMsg.id);
+      await pedirChat(t, resp.id, userMsg.id, fotoActual?.dataUrl);
     } finally {
       setBusy(false); ctl.current = null; cargarUso(); cargarConvs();
     }
   }
 
-  async function manejarError(r: Response, respId: string, kind: "mensaje" | "imagen", userMsgId: string, t: string) {
+  async function manejarError(r: Response, respId: string, userMsgId: string, t: string) {
     const body = await r.json().catch(() => ({}));
     if (body.conversationId) setConvId(body.conversationId);
     if (r.status === 429 && body.resetsAt) {
       setMsgs((l) => l.filter((m) => m.id !== respId && m.id !== userMsgId));
       setTexto(t);
-      setLimite({ kind, resetsAt: body.resetsAt, message: body.error });
+      setLimite({ resetsAt: body.resetsAt, message: body.error });
       return;
     }
     patch(respId, (m) => ({ ...m, pending: false, error: body.error || "Algo salió mal. Volvé a intentar." }));
   }
 
-  async function pedirChat(t: string, respId: string, userMsgId: string) {
+  async function pedirChat(t: string, respId: string, userMsgId: string, image?: string) {
     const r = await fetch("/api/chat", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: t, conversationId: convId }), signal: ctl.current?.signal
+      body: JSON.stringify({ message: t, conversationId: convId, image }), signal: ctl.current?.signal
     }).catch(() => null);
     if (!r) { patch(respId, (m) => ({ ...m, pending: false, error: "No hay conexión. Revisá tu internet." })); return; }
-    if (!r.ok || !r.body) { await manejarError(r, respId, "mensaje", userMsgId, t); return; }
+    if (!r.ok || !r.body) { await manejarError(r, respId, userMsgId, t); return; }
     const reader = r.body.getReader();
     const dec = new TextDecoder();
     let buf = "", acc = "";
@@ -147,29 +192,16 @@ export function ChatApp({ userId }: { userId: string }) {
     }
   }
 
-  async function pedirImagen(t: string, respId: string, userMsgId: string) {
-    const r = await fetch("/api/imagen", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt: t, conversationId: convId }), signal: ctl.current?.signal
-    }).catch(() => null);
-    if (!r) { patch(respId, (m) => ({ ...m, pending: false, error: "No hay conexión. Revisá tu internet." })); return; }
-    if (!r.ok) { await manejarError(r, respId, "imagen", userMsgId, t); return; }
-    const body = await r.json();
-    setConvId(body.conversationId);
-    patch(respId, (m) => ({ ...m, pending: false, content: `Imagen generada: ${t}`, meta: { kind: "imagen", url: body.url } }));
-  }
-
   const c = uso?.uso;
-  const restante = (k: "mensaje" | "imagen") => (c ? Math.max(0, c[k].limit - c[k].used) : null);
-  const inactivo = uso && (modo === "mensaje" ? !uso.chatActivo : !uso.imagenesActivas);
+  const restante = c ? Math.max(0, c.mensaje.limit - c.mensaje.used) : null;
+  const inactivo = uso && !uso.chatActivo;
 
   return (
     <div className={`chat-app${drawer ? " drawer" : ""}`}>
       <aside className="chat-side" aria-label="Conversaciones">
         <button className="btn primary" type="button" onClick={nueva}>+ Nueva conversación</button>
         <div className="chat-usage">
-          <div className="usage-row"><span>Mensajes</span><b>{restante("mensaje") ?? "–"} / {c?.mensaje.limit ?? "–"}</b></div>
-          <div className="usage-row"><span>Imágenes</span><b>{restante("imagen") ?? "–"} / {c?.imagen.limit ?? "–"}</b></div>
+          <div className="usage-row"><span>Mensajes</span><b>{restante ?? "–"} / {c?.mensaje.limit ?? "–"}</b></div>
           <div className="small">Plan {uso?.plan.nombre ?? "…"} · se renueva cada 24 h</div>
           {uso?.plan.id === "gratis" && <Link className="small" href="/planes">Ver planes con más uso</Link>}
         </div>
@@ -199,34 +231,34 @@ export function ChatApp({ userId }: { userId: string }) {
       <section className="chat-main">
         <div className="chat-mobilebar">
           <button className="linkbtn" type="button" onClick={() => setDrawer(true)}>☰ Historial</button>
-          <span className="small">{restante("mensaje") ?? "–"} mensajes · {restante("imagen") ?? "–"} imágenes</span>
+          <span className="small">{restante ?? "–"} mensajes</span>
         </div>
         <div className="chat-scroll" ref={scroller}>
           <div className="chat-thread">
             {msgs.length === 0 && (
               <div className="chat-welcome">
                 <h1>Tu socio de <span style={{ color: "var(--accent)" }}>ecommerce</span></h1>
-                <p className="lead">Preguntame por productos ganadores, cómo armar tu tienda, anuncios para Meta, precios y proveedores. O tocá <b>Imagen</b> para crear fotos de producto y creatividades.</p>
+                <p className="lead">Preguntame por productos ganadores, cómo armar tu tienda, anuncios para Meta, precios y proveedores. Y con el <b>clip 📎</b> podés subir una foto (un producto, un anuncio, una captura) para que la lea y te ayude.</p>
               </div>
             )}
             {msgs.map((m) => (
               <div key={m.id} className={`bubble-row ${m.role}`}>
                 {m.role === "user" ? (
-                  <div className="bubble">{m.meta?.kind === "imagen" && <span className="tag">Imagen</span>}{m.content}</div>
+                  <div className="bubble">
+                    {m.meta?.fotoUrl ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img className="bubble-foto" src={m.meta.fotoUrl} alt="Foto enviada" />
+                    ) : m.meta?.kind === "foto" ? (
+                      <span className="tag">📷 Foto</span>
+                    ) : null}
+                    {m.content && m.content !== "📷 Foto" ? <span>{m.content}</span> : null}
+                  </div>
                 ) : (
                   <div className="answer">
                     <div className="who"><span className="sun" /> PaludIA</div>
-                    {m.pending && <div className="small thinking">{m.meta?.kind === "imagen" ? "Creando la imagen… puede tardar unos segundos." : m.searching ? "Buscando en internet…" : "Pensando…"}</div>}
+                    {m.pending && <div className="small thinking">{m.searching ? "Buscando en internet…" : "Pensando…"}</div>}
                     {!m.pending && m.searching && <div className="small">Buscando en internet…</div>}
-                    {m.meta?.kind === "imagen" && m.meta.url ? (
-                      <figure className="gen-img">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={m.meta.url} alt={m.content} />
-                        <figcaption><a href={m.meta.url} target="_blank" rel="noopener noreferrer">Abrir en tamaño completo</a></figcaption>
-                      </figure>
-                    ) : (
-                      m.content && !(m.meta?.kind === "imagen" && m.pending) && <div className="md" dangerouslySetInnerHTML={{ __html: md(m.content) }} />
-                    )}
+                    {m.content && <div className="md" dangerouslySetInnerHTML={{ __html: md(m.content) }} />}
                     {m.meta?.sources && m.meta.sources.length > 0 && (
                       <div className="sources">
                         <b>Fuentes</b>
@@ -248,31 +280,37 @@ export function ChatApp({ userId }: { userId: string }) {
           {limite && (
             <div className="limit-box" role="status">
               <b>{limite.message}</b>
-              <span>Podés volver a {limite.kind === "mensaje" ? "escribir" : "crear imágenes"} en <b>{faltan(limite.resetsAt)}</b>.</span>
-              {uso?.plan.id === "gratis" && <Link href="/planes">Ver planes con 500 mensajes y 30 imágenes por día</Link>}
+              <span>Podés volver a escribir en <b>{faltan(limite.resetsAt)}</b>.</span>
+              {uso?.plan.id === "gratis" && <Link href="/planes">Ver planes con más mensajes por día</Link>}
             </div>
           )}
-          {inactivo && <div className="msg info">{modo === "mensaje" ? "El chat con IA todavía no está activado." : "La creación de imágenes todavía no está activada."}</div>}
+          {inactivo && <div className="msg info">El chat con IA todavía no está activado.</div>}
           {aviso && <div className="msg error">{aviso}</div>}
+          {foto && (
+            <div className="foto-preview">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={foto.dataUrl} alt="Foto para enviar" />
+              <span className="small">Foto lista para enviar</span>
+              <button className="linkbtn" type="button" onClick={() => setFoto(null)} aria-label="Quitar foto">Quitar ✕</button>
+            </div>
+          )}
           <form className="composer" onSubmit={enviar}>
             <textarea
               ref={input}
               className="composer-input"
               rows={1}
-              aria-label={modo === "imagen" ? "Descripción de la imagen" : "Mensaje"}
-              placeholder={modo === "imagen" ? "Describí la imagen: «un gato astronauta en Santa Fe, estilo acuarela»" : "Escribí tu mensaje…"}
+              aria-label="Mensaje"
+              placeholder={foto ? "Agregá una pregunta sobre la foto (opcional)…" : "Escribí tu mensaje… o subí una foto con el clip 📎"}
               value={texto}
-              maxLength={modo === "imagen" ? 1500 : 8000}
+              maxLength={8000}
               onChange={(e) => { setTexto(e.target.value); e.target.style.height = "auto"; e.target.style.height = Math.min(e.target.scrollHeight, 200) + "px"; }}
               onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !matchMedia("(pointer:coarse)").matches) { e.preventDefault(); enviar(); } }}
             />
+            <input ref={fileRef} type="file" accept="image/*" hidden onChange={elegirFoto} />
             <div className="row" style={{ justifyContent: "space-between" }}>
-              <div className="seg" role="group" aria-label="Qué querés crear">
-                <label><input type="radio" name="modo" checked={modo === "mensaje"} onChange={() => setModo("mensaje")} /><span>Mensaje</span></label>
-                <label><input type="radio" name="modo" checked={modo === "imagen"} onChange={() => setModo("imagen")} /><span>Imagen</span></label>
-              </div>
-              <button className="btn primary auto" type="submit" disabled={!busy && !texto.trim()}>
-                {busy ? "Detener" : modo === "imagen" ? "Crear imagen" : "Enviar"}
+              <button className="btn auto" type="button" onClick={() => fileRef.current?.click()} disabled={busy} aria-label="Subir una foto">📎 Foto</button>
+              <button className="btn primary auto" type="submit" disabled={!busy && !texto.trim() && !foto}>
+                {busy ? "Detener" : "Enviar"}
               </button>
             </div>
           </form>

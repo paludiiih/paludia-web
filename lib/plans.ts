@@ -28,7 +28,7 @@ export const PLANES: Record<PlanId, Plan> = {
     maxRespuesta: 2048,
     busquedaWeb: false,
     modeloImagen: "fal-ai/flux/schnell",
-    descripcion: ["30 mensajes cada 24 horas", "4 imágenes cada 24 horas", "Asistente de ecommerce con IA rápida (Claude Haiku)", "Historial guardado en tu cuenta"],
+    descripcion: ["30 mensajes cada 24 horas", "Subí fotos y PaludIA las lee y responde", "Asistente de ecommerce con IA rápida (Claude Haiku)", "Historial guardado en tu cuenta"],
     disponible: true
   },
   pro: {
@@ -41,7 +41,7 @@ export const PLANES: Record<PlanId, Plan> = {
     maxRespuesta: 8192,
     busquedaWeb: true,
     modeloImagen: "fal-ai/flux/dev",
-    descripcion: ["50 mensajes cada 24 horas", "12 imágenes cada 24 horas, en mejor calidad", "IA más capaz (Claude Sonnet) y respuestas más completas", "Búsqueda en tiendas y en internet con fuentes"],
+    descripcion: ["50 mensajes cada 24 horas", "Subí fotos para que las analice (productos, anuncios, capturas)", "IA más capaz (Claude Sonnet) y respuestas más completas", "Búsqueda en tiendas y en internet con fuentes"],
     disponible: false
   },
   premium: {
@@ -54,7 +54,7 @@ export const PLANES: Record<PlanId, Plan> = {
     maxRespuesta: 16384,
     busquedaWeb: true,
     modeloImagen: "fal-ai/flux/dev",
-    descripcion: ["120 mensajes cada 24 horas", "25 imágenes cada 24 horas, en mejor calidad", "La IA más avanzada (Claude Opus)", "Búsqueda en tiendas y en internet con fuentes"],
+    descripcion: ["120 mensajes cada 24 horas", "Subí fotos para que las analice en detalle", "La IA más avanzada (Claude Opus)", "Búsqueda en tiendas y en internet con fuentes"],
     disponible: false
   }
 };

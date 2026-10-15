@@ -109,9 +109,10 @@ footer.foot a { color: var(--muted); }
 .sources { display: flex; flex-direction: column; gap: 3px; font-size: 13.5px; border-top: 1px dashed var(--line); padding-top: 8px; }
 .sources b { font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
 .sources a { text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gen-img { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.gen-img img { width: min(420px, 100%); border-radius: 14px; border: 1px solid var(--line); }
-.gen-img figcaption { font-size: 13px; }
+.bubble-foto { display: block; width: min(260px, 100%); border-radius: 12px; margin-bottom: 6px; }
+.foto-preview { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 8px 12px; }
+.foto-preview img { width: 46px; height: 46px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.foto-preview .linkbtn { margin-left: auto; }
 .chat-bottom { padding: 8px max(16px, env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); display: flex; flex-direction: column; gap: 8px; max-width: 812px; width: 100%; margin: 0 auto; }
 .composer { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 10px 10px 10px 14px; display: flex; flex-direction: column; gap: 8px; }
 .composer-input { border: 0; outline: 0; resize: none; background: transparent; width: 100%; max-height: 200px; line-height: 1.5; padding: 4px 0; }

@@ -14,8 +14,8 @@ export default async function Home() {
   return (
     <main className="page stack">
       <h1>Tu socio de <span style={{ color: "var(--accent)" }}>ecommerce</span>, con IA</h1>
-      <p className="lead">PaludIA te ayuda a encontrar productos ganadores, armar tu tienda, escribir anuncios y crear imágenes de producto. Tu historial queda guardado en tu cuenta.</p>
-      <p className="lead">Gratis: {g.mensajesPorDia} mensajes y {g.imagenesPorDia} imágenes cada 24 horas.</p>
+      <p className="lead">PaludIA te ayuda a encontrar productos ganadores, armar tu tienda y escribir anuncios. Subí la foto de un producto o un anuncio y la lee para ayudarte. Tu historial queda guardado en tu cuenta.</p>
+      <p className="lead">Gratis: {g.mensajesPorDia} mensajes cada 24 horas, con lectura de fotos.</p>
       <div className="row">
         <Link className="btn primary auto" href="/registro">Crear cuenta gratis</Link>
         <Link className="btn auto" href="/ingresar">Ya tengo cuenta</Link>

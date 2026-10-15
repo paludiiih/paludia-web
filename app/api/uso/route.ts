@@ -7,8 +7,7 @@ export async function GET() {
     return Response.json({
       plan: { id: plan.id, nombre: plan.nombre, busquedaWeb: plan.busquedaWeb },
       uso,
-      chatActivo: Boolean(process.env.ANTHROPIC_API_KEY),
-      imagenesActivas: Boolean(process.env.FAL_KEY)
+      chatActivo: Boolean(process.env.ANTHROPIC_API_KEY)
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     return errorResponse(e);

@@ -6,6 +6,20 @@ export const maxDuration = 60;
 
 const MAX_HISTORIAL = 30; // mensajes anteriores que se envían como contexto
 const MAX_CARACTERES = 8000; // largo máximo de cada mensaje del usuario
+const TIPOS_IMAGEN = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_IMAGEN_BYTES = 4_500_000; // ~4,5 MB por foto (límite de la API)
+
+// Acepta una foto como "data:image/...;base64,...." y la valida.
+function leerImagen(v: unknown): { media_type: "image/jpeg" | "image/png" | "image/webp" | "image/gif"; data: string } | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const m = /^data:(image\/[a-z+]+);base64,([A-Za-z0-9+/=]+)$/.exec(v.trim());
+  if (!m) throw new ApiError(400, "La foto no tiene un formato válido.");
+  const media_type = m[1].toLowerCase();
+  const data = m[2];
+  if (!TIPOS_IMAGEN.includes(media_type)) throw new ApiError(400, "Formato de foto no permitido. Usá JPG, PNG o WebP.");
+  if (data.length * 0.75 > MAX_IMAGEN_BYTES) throw new ApiError(400, "La foto es muy pesada. Probá con una más chica.");
+  return { media_type: media_type as "image/jpeg", data };
+}
 
 function reglas(busquedaWeb: boolean, instrucciones: string) {
   const ahora = new Date().toLocaleString("es-AR", { timeZone: "America/Argentina/Buenos_Aires", dateStyle: "full", timeStyle: "short" });
@@ -20,7 +34,7 @@ function reglas(busquedaWeb: boolean, instrucciones: string) {
     busquedaWeb
       ? "Tenés búsqueda web: usala para buscar productos en tiendas y marketplaces, precios actuales, proveedores, tendencias y datos de la competencia, y citá siempre las fuentes con sus enlaces reales."
       : "No tenés acceso a internet en este plan, así que no podés mirar tiendas ni precios en vivo: respondé con tu conocimiento y criterios, aclaralo, y sugerí pasar al plan Pro para que pueda buscar en tiendas e internet.",
-    "Si te piden generar una imagen, explicá que se hace con el botón «Imagen» al lado del cuadro de texto.",
+    "El usuario puede subir fotos con el clip al lado del cuadro de texto, y vos las ves y las analizás. Si suben la foto de un producto, identificá qué es y ofrecé ayuda concreta de ecommerce (ficha, anuncios, precio, nicho). Si suben un anuncio, una captura o una etiqueta, leé lo que diga y dá tu análisis. No generás ni editás imágenes; si lo piden, aclaralo con amabilidad.",
     instrucciones.trim() ? `Preferencias del usuario (respetalas):\n${instrucciones.trim().slice(0, 4000)}` : ""
   ].filter(Boolean).join("\n");
 }
@@ -33,30 +47,44 @@ export async function POST(req: Request) {
     if (!process.env.ANTHROPIC_API_KEY) throw new ApiError(503, "El chat con IA todavía no está activado. Falta conectar la clave de la IA.");
     const body = await req.json().catch(() => ({}));
     const texto = String(body.message ?? "").trim();
-    if (!texto) throw new ApiError(400, "Escribí un mensaje.");
+    const imagen = leerImagen(body.image);
+    if (!texto && !imagen) throw new ApiError(400, "Escribí un mensaje o subí una foto.");
     if (texto.length > MAX_CARACTERES) throw new ApiError(400, `El mensaje es muy largo. Máximo ${MAX_CARACTERES.toLocaleString("es-AR")} caracteres.`);
 
     const { supabase, admin, user, plan } = ctx;
     const uso = await consumir(admin, user.id, plan, "mensaje");
     consumido = true;
-    const convId = await conversacion(supabase, user.id, body.conversationId || undefined, texto);
+    const titulo = texto || "Foto";
+    const contenidoUsuario = texto || "📷 Foto";
+    const convId = await conversacion(supabase, user.id, body.conversationId || undefined, titulo);
 
     const [{ data: previos }, { data: settings }] = await Promise.all([
       supabase.from("messages").select("role, content").eq("conversation_id", convId).order("created_at", { ascending: false }).limit(MAX_HISTORIAL),
       supabase.from("user_settings").select("instructions").eq("user_id", user.id).maybeSingle()
     ]);
-    await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: texto });
+    await supabase.from("messages").insert({ conversation_id: convId, user_id: user.id, role: "user", content: contenidoUsuario, meta: imagen ? { kind: "foto" } : undefined });
 
-    const historial: Anthropic.MessageParam[] = (previos ?? [])
+    const historial: { role: "user" | "assistant"; content: string }[] = (previos ?? [])
       .reverse()
       .filter((m) => m.content && m.content.trim())
       .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
     while (historial.length && historial[0].role !== "user") historial.shift();
     const mensajes: Anthropic.MessageParam[] = [];
-    for (const m of [...historial, { role: "user" as const, content: texto }]) {
+    for (const m of historial) {
       const prev = mensajes.at(-1);
-      if (prev && prev.role === m.role) prev.content = `${prev.content}\n\n${m.content}`;
-      else mensajes.push({ ...m });
+      if (prev && prev.role === m.role && typeof prev.content === "string") prev.content = `${prev.content}\n\n${m.content}`;
+      else mensajes.push({ role: m.role, content: m.content });
+    }
+    // Mensaje nuevo del usuario: con la foto como bloque de imagen si la hay.
+    const bloques: Anthropic.ContentBlockParam[] = [];
+    if (imagen) bloques.push({ type: "image", source: { type: "base64", media_type: imagen.media_type, data: imagen.data } });
+    bloques.push({ type: "text", text: texto || "Mirá esta foto y ayudame." });
+    const ultimo = mensajes.at(-1);
+    if (ultimo && ultimo.role === "user") {
+      const prevBloques = typeof ultimo.content === "string" ? [{ type: "text", text: ultimo.content } as Anthropic.ContentBlockParam] : ultimo.content;
+      ultimo.content = [...prevBloques, ...bloques];
+    } else {
+      mensajes.push({ role: "user", content: bloques });
     }
 
     const client = new Anthropic({

@@ -19,7 +19,7 @@ export default async function Page() {
   return (
     <main className="page stack" style={{ maxWidth: 1040 }}>
       <h1>Planes</h1>
-      <p className="lead">Todos los planes renuevan su cupo de mensajes e imágenes 24 horas después de que empezás a usarlo.</p>
+      <p className="lead">Todos los planes renuevan su cupo de mensajes 24 horas después de que empezás a usarlo, y en todos podés subir fotos para que la IA las lea.</p>
       <div className="plans">
         {Object.values(PLANES).map((p) => (
           <section key={p.id} className={`plan${actual === p.id ? " current" : ""}`}>
