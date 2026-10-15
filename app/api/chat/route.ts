@@ -59,7 +59,11 @@ export async function POST(req: Request) {
       else mensajes.push({ ...m });
     }
 
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+    const client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      // Si la clave es de la organización (no de un espacio de trabajo), indicamos cuál usar.
+      ...(process.env.ANTHROPIC_WORKSPACE_ID ? { defaultHeaders: { "anthropic-workspace-id": process.env.ANTHROPIC_WORKSPACE_ID } } : {})
+    });
     const tools: Anthropic.ToolUnion[] = plan.busquedaWeb ? [{ type: "web_search_20250305", name: "web_search", max_uses: 3 }] : [];
     const stream = client.messages.stream({
       model: plan.modeloChat,
