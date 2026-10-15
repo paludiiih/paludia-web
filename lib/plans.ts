@@ -35,26 +35,26 @@ export const PLANES: Record<PlanId, Plan> = {
     id: "pro",
     nombre: "Pro",
     precio: "US$15",
-    mensajesPorDia: 200,
-    imagenesPorDia: 50,
+    mensajesPorDia: 50,
+    imagenesPorDia: 12,
     modeloChat: "claude-sonnet-5-5",
     maxRespuesta: 8192,
     busquedaWeb: true,
     modeloImagen: "fal-ai/flux/dev",
-    descripcion: ["200 mensajes cada 24 horas", "50 imágenes cada 24 horas, en mejor calidad", "IA más capaz (Claude Sonnet) y respuestas más completas", "Búsqueda en tiendas y en internet con fuentes"],
+    descripcion: ["50 mensajes cada 24 horas", "12 imágenes cada 24 horas, en mejor calidad", "IA más capaz (Claude Sonnet) y respuestas más completas", "Búsqueda en tiendas y en internet con fuentes"],
     disponible: false
   },
   premium: {
     id: "premium",
     nombre: "ProMax",
-    precio: "A definir",
-    mensajesPorDia: 500,
-    imagenesPorDia: 100,
+    precio: "US$39",
+    mensajesPorDia: 120,
+    imagenesPorDia: 25,
     modeloChat: "claude-opus-5-5",
     maxRespuesta: 16384,
     busquedaWeb: true,
     modeloImagen: "fal-ai/flux/dev",
-    descripcion: ["500 mensajes cada 24 horas", "100 imágenes cada 24 horas, en mejor calidad", "La IA más avanzada (Claude Opus)", "Búsqueda en tiendas y en internet con fuentes"],
+    descripcion: ["120 mensajes cada 24 horas", "25 imágenes cada 24 horas, en mejor calidad", "La IA más avanzada (Claude Opus)", "Búsqueda en tiendas y en internet con fuentes"],
     disponible: false
   }
 };
