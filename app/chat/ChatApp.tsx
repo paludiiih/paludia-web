@@ -430,8 +430,12 @@ export function ChatApp({ userId, userName }: { userId: string; userName: string
           <span className="tool-tx"><b>Búsqueda web</b><span>{web ? "Precios y tiendas en vivo, con fuentes" : "Precios y tiendas en vivo"}</span></span>
           <span className={web ? "cs-chip" : "soon-chip"} style={web ? { color: "var(--turq)", borderColor: "rgba(34,211,238,.35)", background: "rgba(34,211,238,.1)" } : undefined}>{web ? "Activa" : "Pro"}</span>
         </div>
+        <Link className="tool-row" href="/herramientas/calculadoras">
+          <span className="tool-ico b4">{I.calc}</span>
+          <span className="tool-tx"><b>Calculadora de precios</b><span>Margen, costo y punto de equilibrio</span></span>
+        </Link>
         <Link className="tool-row" href="/planes">
-          <span className="tool-ico b4">{I.crown}</span>
+          <span className="tool-ico b3">{I.crown}</span>
           <span className="tool-tx"><b>Planes y límites</b><span>Más mensajes y funciones</span></span>
         </Link>
 
@@ -447,8 +451,8 @@ export function ChatApp({ userId, userName }: { userId: string; userName: string
           <span className="soon-chip">Pronto</span>
         </div>
         <div className="tool-row soon">
-          <span className="tool-ico b4">{I.calc}</span>
-          <span className="tool-tx"><b>Calculadora de precios</b><span>Margen, costo y punto de equilibrio</span></span>
+          <span className="tool-ico b1">{I.doc}</span>
+          <span className="tool-tx"><b>CV optimizado (ATS)</b><span>Tu CV adaptado a cada búsqueda</span></span>
           <span className="soon-chip">Pronto</span>
         </div>
       </aside>
