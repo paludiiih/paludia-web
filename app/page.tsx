@@ -13,8 +13,8 @@ export default async function Home() {
   const g = PLANES.gratis;
   return (
     <main className="page stack">
-      <h1>Tu asistente de IA, <span style={{ color: "var(--accent)" }}>en español</span></h1>
-      <p className="lead">Chateá con inteligencia artificial y creá imágenes desde una descripción. Tu historial queda guardado en tu cuenta.</p>
+      <h1>Tu socio de <span style={{ color: "var(--accent)" }}>ecommerce</span>, con IA</h1>
+      <p className="lead">PaludIA te ayuda a encontrar productos ganadores, armar tu tienda, escribir anuncios y crear imágenes de producto. Tu historial queda guardado en tu cuenta.</p>
       <p className="lead">Gratis: {g.mensajesPorDia} mensajes y {g.imagenesPorDia} imágenes cada 24 horas.</p>
       <div className="row">
         <Link className="btn primary auto" href="/registro">Crear cuenta gratis</Link>

@@ -205,8 +205,8 @@ export function ChatApp({ userId }: { userId: string }) {
           <div className="chat-thread">
             {msgs.length === 0 && (
               <div className="chat-welcome">
-                <h1>¿En qué te ayudo <span style={{ color: "var(--accent)" }}>hoy</span>?</h1>
-                <p className="lead">Escribí tu pregunta, o tocá <b>Imagen</b> para crear una imagen a partir de una descripción.</p>
+                <h1>Tu socio de <span style={{ color: "var(--accent)" }}>ecommerce</span></h1>
+                <p className="lead">Preguntame por productos ganadores, cómo armar tu tienda, anuncios para Meta, precios y proveedores. O tocá <b>Imagen</b> para crear fotos de producto y creatividades.</p>
               </div>
             )}
             {msgs.map((m) => (

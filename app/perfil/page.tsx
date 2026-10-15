@@ -7,7 +7,7 @@ import { DeleteAccount } from "./DeleteAccount";
 export const metadata: Metadata = { title: "Perfil" };
 
 const PROVIDER_NAME: Record<string, string> = { email: "Correo y contraseña", google: "Google" };
-const PLAN_NAME: Record<string, string> = { gratis: "Gratis", pro: "Pro", premium: "Premium" };
+const PLAN_NAME: Record<string, string> = { gratis: "Gratis", pro: "Pro", premium: "ProMax" };
 
 export default async function Page() {
   const supabase = await createClient();

@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: { default: "PaludIA", template: "%s · PaludIA" },
-  description: "Tu asistente de inteligencia artificial en español."
+  description: "Tu socio de ecommerce con IA: productos ganadores, tiendas, anuncios e imágenes."
 };
 export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 
