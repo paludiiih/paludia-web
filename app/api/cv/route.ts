@@ -62,13 +62,22 @@ export async function POST(req: Request) {
       oferta ? "OFERTA LABORAL A LA QUE SE POSTULA:\n" + oferta : "No se proporcionó una oferta específica; hacé un CV general y prolijo."
     ].filter((x) => x.length > 0).join("\n\n");
 
-    const resp = await client.messages.create({
-      model: plan.modeloChat,
-      max_tokens: 3600,
-      temperature: 0.3,
-      system: sistema(conCarta),
-      messages: [{ role: "user", content: prompt }]
-    });
+    let resp;
+    try {
+      resp = await client.messages.create({
+        model: plan.modeloChat,
+        max_tokens: 3600,
+        system: sistema(conCarta),
+        messages: [{ role: "user", content: prompt }]
+      });
+    } catch (err) {
+      console.error("cv IA", err);
+      const status = (err as { status?: number })?.status;
+      throw new ApiError(status === 429 || status === 529 ? 503 : 502,
+        status === 429 || status === 529
+          ? "La IA está muy ocupada en este momento. Volvé a intentar en un minuto; no se descontó el cupo."
+          : "La IA no pudo generar el CV. Volvé a intentar; no se descontó el cupo.");
+    }
 
     const precio = COSTOS.chat[plan.modeloChat] ?? { entrada: 4, salida: 20 };
     await sumarGasto(admin, (resp.usage.input_tokens * precio.entrada + resp.usage.output_tokens * precio.salida) / 1e6);
