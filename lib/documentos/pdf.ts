@@ -1,7 +1,17 @@
 // Genera un PDF de CV apto para sistemas ATS: una sola columna, fuente estándar
 // (Helvetica), texto real seleccionable, sin tablas, imágenes ni columnas.
-import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import { PDFDocument, rgb, type PDFFont, type PDFPage } from "pdf-lib";
+import fontkit from "@pdf-lib/fontkit";
+import { FUENTE_REGULAR, FUENTE_BOLD } from "./fuentes";
 import type { CV } from "./tipos";
+
+// Incrusta la fuente en el documento para que el texto se vea en cualquier visor.
+async function fuentes(doc: PDFDocument) {
+  doc.registerFontkit(fontkit);
+  const font = await doc.embedFont(Buffer.from(FUENTE_REGULAR, "base64"), { subset: true });
+  const bold = await doc.embedFont(Buffer.from(FUENTE_BOLD, "base64"), { subset: true });
+  return { font, bold };
+}
 
 const A4_W = 595.28, A4_H = 841.89, M = 52;
 const WIDTH = A4_W - M * 2;
@@ -10,8 +20,7 @@ export async function generarPdfCV(cv: CV): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`CV ${cv.nombre}`);
   doc.setCreator("PaludIA");
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const { font, bold } = await fuentes(doc);
   const ink = rgb(0.1, 0.12, 0.16), gray = rgb(0.36, 0.4, 0.48), accent = rgb(0.11, 0.3, 0.56), rule = rgb(0.8, 0.84, 0.9);
 
   let page: PDFPage = doc.addPage([A4_W, A4_H]);
@@ -98,8 +107,7 @@ export async function generarPdfCV(cv: CV): Promise<Uint8Array> {
 export async function generarPdfTexto(titulo: string, cuerpo: string): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(titulo); doc.setCreator("PaludIA");
-  const font = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const { font, bold } = await fuentes(doc);
   const ink = rgb(0.1, 0.12, 0.16);
   let page: PDFPage = doc.addPage([A4_W, A4_H]);
   let y = A4_H - M;
